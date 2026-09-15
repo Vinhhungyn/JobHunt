@@ -23,7 +23,17 @@ if (($claims['role'] ?? '') !== 'admin') {
     exit;
 }
 
-$users = mysqli_fetch_assoc(mysqli_query($conn, 'SELECT COUNT(*) c FROM users'))['c'];
+$users  = mysqli_fetch_assoc(mysqli_query($conn, 'SELECT COUNT(*) c FROM users'))['c'];
 $emails = mysqli_fetch_all(mysqli_query($conn, 'SELECT id, email, role FROM users'), MYSQLI_ASSOC);
 
-echo json_encode(['total_users' => (int)$users, 'users' => $emails]);
+// CTF flag — only reachable after successfully forging a JWT with role=admin.
+// Steps: 1) login as any user to get a real HS256 token,
+//        2) recover JWT_SECRET via the weak-secret wordlist (it's "jobhunt123"),
+//        3) forge a new token with {"role":"admin"} and send it here.
+$flag = 'FLAG{JWT_algorithm_confusion_admin_forge_2026}';
+
+echo json_encode([
+    'total_users' => (int)$users,
+    'users'       => $emails,
+    'flag'        => $flag,
+]);
