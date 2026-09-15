@@ -1,0 +1,14 @@
+JobHunt — Mau CV: Frontend Developer
+=====================================
+
+Ho va ten:
+Vi tri ung tuyen: Frontend Developer
+Ky nang: JavaScript, React, CSS
+Kinh nghiem lam viec:
+ - [Cong ty] — [Vi tri] ([Thoi gian])
+   + Mo ta cong viec...
+
+Hoc van:
+Chung chi:
+
+(Day la file mau, tai ve va chinh sua thong tin cua ban.)

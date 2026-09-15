@@ -1,0 +1,73 @@
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+    container_name: jobhunt_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./src:/var/www/html:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - php
+
+  php:
+    build:
+      context: ./docker/php
+    container_name: jobhunt_php
+    volumes:
+      - ./src:/var/www/html
+      - ./scripts:/scripts:ro
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      APP_ENV: ${APP_ENV}
+    networks:
+      - backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # port 9000 intentionally NOT published to the host or to `frontend` —
+    # only nginx (on the shared `backend` network) can reach php-fpm.
+
+  mysql:
+    image: mysql:8.0
+    container_name: jobhunt_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # port 3306 intentionally NOT published to the host — only reachable
+    # from the `backend` network (nginx has no business talking to mysql
+    # directly, but it shares the network so we keep the two-tier model
+    # simple; php is the only service that actually connects).
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  db_data:
