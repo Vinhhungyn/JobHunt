@@ -92,3 +92,15 @@ CREATE TABLE admin_logs (
   actor VARCHAR(150) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- CTF: Secret flags table — NOT exposed in any normal UI or API response.
+-- Reachable only via SQL injection (UNION-based, blind, or second-order).
+-- Example payload against the job search endpoint:
+--   ' UNION SELECT flag,2,3,4,5,6,7,8 FROM flags-- -
+CREATE TABLE flags (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  flag VARCHAR(255) NOT NULL,
+  hint TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
