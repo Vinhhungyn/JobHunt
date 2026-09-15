@@ -98,8 +98,46 @@ if (isset($jobIds[0])) {
     $stmt->execute();
 }
 
+// --- CTF: Applications (IDOR lab) ---
+// Normal application: alice applies to job 0 (PHP Backend Developer)
+if (isset($jobIds[0])) {
+    $stmt = $mysqli->prepare("INSERT INTO applications (job_id, candidate_id, cv_path, cover_letter, status) VALUES (?, ?, ?, ?, 'pending')");
+    $cvPath = 'uploads/alice_cv.pdf';
+    $coverLetter = 'I am excited to apply for this role. I have 3 years of PHP/MySQL experience and love clean code.';
+    $stmt->bind_param('iiss', $jobIds[0], $cand1, $cvPath, $coverLetter);
+    $stmt->execute();
+}
+
+// Hidden application: carol applies to job 3 (Java Backend Engineer) with IDOR flag in cover_letter.
+// This application belongs to carol (cand3). If you access it as alice (cand1) via
+//   /dashboard/candidate/cv_view.php?application_id=<carol's id>
+// you leak another candidate's private data — that's the IDOR.
+if (isset($jobIds[3])) {
+    $stmt = $mysqli->prepare("INSERT INTO applications (job_id, candidate_id, cv_path, cover_letter, status) VALUES (?, ?, ?, ?, 'accepted')");
+    $cvPath = 'uploads/carol_cv_confidential.pdf';
+    $coverLetter = "Confidential — Carol Le's private application notes.\n\nSalary expectation: 38,000,000 VND\nReference contact: manager@prev-employer.vn / 0909123456\n\nFLAG{IDOR_other_candidates_data_exposed_2026}";
+    $stmt->bind_param('iiss', $jobIds[3], $cand3, $cvPath, $coverLetter);
+    $stmt->execute();
+}
+
+// --- CTF: Flags table (SQLi lab) ---
+// This row is only reachable via SQL injection, e.g.:
+//   ' UNION SELECT flag,2,3,4,5,6,7,8 FROM flags-- -
+$stmt = $mysqli->prepare("INSERT IGNORE INTO flags (name, flag, hint) VALUES (?, ?, ?)");
+$flagName  = 'sqli_flag';
+$flagValue = 'FLAG{SQLi_jobhunt_data_extracted_2026}';
+$flagHint  = 'You extracted this via SQL injection. Try UNION SELECT against the jobs search or login endpoint.';
+$stmt->bind_param('sss', $flagName, $flagValue, $flagHint);
+$stmt->execute();
+
 echo "Seed complete.\n";
 echo "Demo logins:\n";
 echo "  admin@jobhunt.local / AdminP@ss1\n";
 echo "  hr@techcorp.local   / Employer123\n";
 echo "  alice@example.com   / Candidate123\n";
+echo "\nCTF flags hidden at:\n";
+echo "  RCE  → cat /flag_rce.txt  (after command injection)\n";
+echo "  SQLi → SELECT flag FROM flags  (after SQL injection)\n";
+echo "  LFI  → src/config/.secret  (after path traversal)\n";
+echo "  IDOR → carol's cover_letter in applications table\n";
+echo "  JWT  → /api/admin_stats.php response (after JWT forgery)\n";
